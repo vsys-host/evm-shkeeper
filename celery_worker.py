@@ -1,4 +1,4 @@
-from app import celery, create_app
+from app import celery, create_app  # noqa: F401
 
 
 app = create_app()
