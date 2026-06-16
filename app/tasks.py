@@ -84,26 +84,26 @@ def refresh_balances(self):
 
             for token in config["TOKENS"][config["CURRENT_NETWORK"]].keys():
                 token_instance = Token(token)
-                if Accounts.query.filter_by(address=account, crypto=token).first():
-                    pd = Accounts.query.filter_by(address=account, crypto=token).first()
-                    balance = decimal.Decimal(
+                token_balance = decimal.Decimal(
                         token_instance.contract.functions.balanceOf(
                             w3.to_checksum_address(account)
                         ).call()
                     )
-                    normalized_balance = balance / decimal.Decimal(
+                normalized_balance = token_balance / decimal.Decimal(
                         10 ** (token_instance.contract.functions.decimals().call())
                     )
+                if normalized_balance >= decimal.Decimal(
+                    get_min_token_transfer_threshold(token)
+                ):
+                    have_tokens = copy.deepcopy(token)
+                if Accounts.query.filter_by(address=account, crypto=token).first():
+                    pd = Accounts.query.filter_by(address=account, crypto=token).first()
                     pd.amount = normalized_balance
 
                     with app.app_context():
                         db.session.add(pd)
                         db.session.commit()
                         db.session.close()
-                    if normalized_balance >= decimal.Decimal(
-                        get_min_token_transfer_threshold(token)
-                    ):
-                        have_tokens = copy.deepcopy(token)
 
             if have_tokens in config["TOKENS"][config["CURRENT_NETWORK"]].keys():
                 drain_account.delay(have_tokens, account)
