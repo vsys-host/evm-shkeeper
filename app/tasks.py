@@ -373,10 +373,11 @@ def sweep_foreign_chains(self):
             "total_accounts": 0,
             "total_with_native": 0,
             "total_native_amount": decimal.Decimal(0),
-            "total_with_tokens": 0,
+            "total_token_accounts": {},
             "total_tokens": {},
             "total_swept_native": 0,
             "total_swept_native_amount": decimal.Decimal(0),
+            "total_swept_token_accounts": {},
             "total_swept_tokens": {},
         }
 
@@ -392,7 +393,7 @@ def sweep_foreign_chains(self):
             try:
                 wallets = _get_foreign_wallets(foreign_db)
             except Exception as e:
-                logger.exception(
+                logger.warning(
                     f"[SWEEP] Cannot connect to foreign DB {foreign_db}: {e}"
                 )
                 continue
@@ -405,12 +406,13 @@ def sweep_foreign_chains(self):
                 "checked": 0,
                 "with_native": 0,
                 "native_total": decimal.Decimal(0),
-                "with_tokens": 0,
+                "token_accounts": {sym: 0 for sym in tokens_on_current_chain},
                 "token_totals": {
                     sym: decimal.Decimal(0) for sym in tokens_on_current_chain
                 },
                 "swept_native": 0,
                 "swept_native_total": decimal.Decimal(0),
+                "swept_token_accounts": {sym: 0 for sym in tokens_on_current_chain},
                 "swept_token_totals": {
                     sym: decimal.Decimal(0) for sym in tokens_on_current_chain
                 },
@@ -468,7 +470,7 @@ def sweep_foreign_chains(self):
                         get_min_token_transfer_threshold(token_sym)
                     )
                     if token_balance >= threshold:
-                        chain_summary["with_tokens"] += 1
+                        chain_summary["token_accounts"][token_sym] += 1
                         chain_summary["token_totals"][token_sym] += token_balance
                         logger.warning(
                             f"[SWEEP][{chain_coin}] {checksum_addr} (type={wallet['type']}) "
@@ -496,6 +498,9 @@ def sweep_foreign_chains(self):
                                         chain_coin,
                                         token_sym,
                                     )
+                                    chain_summary["swept_token_accounts"][
+                                        token_sym
+                                    ] += 1
                                     chain_summary["swept_token_totals"][token_sym] += (
                                         token_balance
                                     )
@@ -534,12 +539,15 @@ def sweep_foreign_chains(self):
 
             # Per-chain summary
             tokens_found = {
-                sym: amt
+                sym: {"accounts": chain_summary["token_accounts"][sym], "total": amt}
                 for sym, amt in chain_summary["token_totals"].items()
                 if amt > 0
             }
             tokens_swept = {
-                sym: amt
+                sym: {
+                    "accounts": chain_summary["swept_token_accounts"][sym],
+                    "total": amt,
+                }
                 for sym, amt in chain_summary["swept_token_totals"].items()
                 if amt > 0
             }
@@ -555,28 +563,29 @@ def sweep_foreign_chains(self):
                 f"checked={chain_summary['checked']} "
                 f"with_native={chain_summary['with_native']} "
                 f"native_total={chain_summary['native_total']} {COIN} "
-                f"with_tokens={chain_summary['with_tokens']} "
-                f"token_totals={tokens_found}" + sweep_info
+                f"tokens={tokens_found}" + sweep_info
             )
 
             global_summary["chains_checked"] += 1
             global_summary["total_accounts"] += chain_summary["checked"]
             global_summary["total_with_native"] += chain_summary["with_native"]
             global_summary["total_native_amount"] += chain_summary["native_total"]
-            global_summary["total_with_tokens"] += chain_summary["with_tokens"]
             global_summary["total_swept_native"] += chain_summary["swept_native"]
             global_summary["total_swept_native_amount"] += chain_summary[
                 "swept_native_total"
             ]
-            for sym, amt in tokens_found.items():
-                global_summary["total_tokens"][sym] = (
-                    global_summary["total_tokens"].get(sym, decimal.Decimal(0)) + amt
+            for sym, info in tokens_found.items():
+                g = global_summary["total_tokens"].setdefault(
+                    sym, {"accounts": 0, "total": decimal.Decimal(0)}
                 )
-            for sym, amt in tokens_swept.items():
-                global_summary["total_swept_tokens"][sym] = (
-                    global_summary["total_swept_tokens"].get(sym, decimal.Decimal(0))
-                    + amt
+                g["accounts"] += info["accounts"]
+                g["total"] += info["total"]
+            for sym, info in tokens_swept.items():
+                g = global_summary["total_swept_tokens"].setdefault(
+                    sym, {"accounts": 0, "total": decimal.Decimal(0)}
                 )
+                g["accounts"] += info["accounts"]
+                g["total"] += info["total"]
 
         # Global summary
         global_sweep_info = (
@@ -592,8 +601,7 @@ def sweep_foreign_chains(self):
             f" total_accounts={global_summary['total_accounts']}"
             f" total_with_native={global_summary['total_with_native']}"
             f" total_native={global_summary['total_native_amount']} {COIN}"
-            f" total_with_tokens={global_summary['total_with_tokens']}"
-            f" token_totals={global_summary['total_tokens']}" + global_sweep_info
+            f" tokens={global_summary['total_tokens']}" + global_sweep_info
         )
 
     finally:
