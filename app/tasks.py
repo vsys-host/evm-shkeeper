@@ -340,6 +340,7 @@ def sweep_foreign_chains(self):
         "yes",
         "on",
     )
+    api_delay = float(os.environ.get("SWEEP_FOREIGN_CHAINS_API_CALL_DELAY", "0"))
     mode_label = "[DRY-RUN]" if dry_run else "[LIVE]"
     logger.warning(
         f"[SWEEP] Starting sweep_foreign_chains — mode={mode_label}, current_chain={COIN}"
@@ -440,6 +441,8 @@ def sweep_foreign_chains(self):
                         f"[SWEEP][{chain_coin}] get_balance failed for {checksum_addr}: {e}"
                     )
                     native_balance = decimal.Decimal(0)
+                if api_delay:
+                    time.sleep(api_delay)
 
                 if native_balance >= decimal.Decimal(config["MIN_TRANSFER_THRESHOLD"]):
                     chain_summary["with_native"] += 1
@@ -459,6 +462,8 @@ def sweep_foreign_chains(self):
                         )
                         decimals = token_inst.contract.functions.decimals().call()
                         token_balance = raw_balance / decimal.Decimal(10**decimals)
+                        if api_delay:
+                            time.sleep(api_delay)
                     except Exception as e:
                         logger.exception(
                             f"[SWEEP][{chain_coin}] balanceOf {token_sym} failed "
