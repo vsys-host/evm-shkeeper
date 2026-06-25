@@ -1,5 +1,5 @@
 from app.chains import CHAINS, SUPPORTED_COINS, WALLET_ALIASES
-from app.chains import arbitrum, avalanche, ethereum
+from app.chains import arbitrum, avalanche, ethereum, xdc
 
 
 def test_supported_coins():
@@ -10,6 +10,7 @@ def test_supported_coins():
         "BNB",
         "MATIC",
         "AVAX",
+        "XDC",
     )
 
 
@@ -62,3 +63,18 @@ def test_wallet_alias_maps_avalanche_to_avax():
 
 def test_avalanche_mainnet_has_usdt_token():
     assert "AVALANCHE-USDT" in avalanche.TOKENS["main"]
+
+
+def test_xdc_chain_defaults():
+    assert xdc.COIN == "XDC"
+    assert xdc.DB_NAME == "xdc-shkeeper"
+    assert xdc.DEFAULTS["ENABLE_INTERNAL_TX_SCAN"] is False
+
+def test_xdc_mainnet_has_usdc_token():
+    assert "XDC-USDC" in xdc.TOKENS["main"]
+
+def test_xdc_mainnet_has_audd_token():
+    assert "XDC-AUDD" in xdc.TOKENS["main"]
+
+def test_xdc_apothem_has_usdc_token():
+    assert "XDC-USDC" in xdc.TOKENS["apothem"]

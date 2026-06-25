@@ -1,6 +1,6 @@
-from . import arbitrum, avalanche, bnb, ethereum, optimism, polygon
+from . import arbitrum, avalanche, bnb, ethereum, optimism, polygon, xdc
 
-_CHAIN_MODULES = (ethereum, arbitrum, optimism, bnb, polygon, avalanche)
+_CHAIN_MODULES = (ethereum, arbitrum, optimism, bnb, polygon, avalanche, xdc)
 
 SUPPORTED_COINS = tuple(module.COIN for module in _CHAIN_MODULES)
 
