@@ -94,7 +94,7 @@ def get_metrics():
 
         evm_fullnode_status.set(data.get("fullnode_status", 0))
 
-        if data[f"fullnode_status"] == 1:
+        if data["fullnode_status"] == 1:
             evm_fullnode_last_block.set(data.get("last_fullnode_block_number", 0))
             evm_fullnode_last_block_timestamp.set(
                 data.get("last_fullnode_block_timestamp", 0)
